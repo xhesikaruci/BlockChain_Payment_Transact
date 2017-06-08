@@ -1,0 +1,54 @@
+#!/bin/bash
+
+TEMPFILE=/tmp/params-$$
+GETTEXT="gettext -d itmo_ui"
+
+set_dialog(){
+which gdialog 2> /dev/null && DIALOG=gdialog || DIALOG=dialog
+echo $DIALOG
+}
+
+ui_main() {
+    NAME="Ether Sender"
+    DIALOG=$(set_dialog)
+
+
+while true
+do
+
+	STATUS=$(./itmo -s)
+	if [[ $STATUS != *"OK" ]];
+        then
+        echo $STATUS
+	$DIALOG --title "`$GETTEXT \"Error!\"`" --msgbox "$STATUS" 6 20
+        exit 
+	fi
+	
+	
+	
+	$DIALOG --title "$NAME" --inputbox "`gettext \"Please enter the account of SENDER:\"`" 8 35 2> $TEMPFILE
+	SENDER=$(cat $TEMPFILE)
+	
+	$DIALOG --title "$NAME" --inputbox "`gettext \"Please enter the account of RECEIVER:\"`" 8 35 2> $TEMPFILE
+        RECEIVER=$(cat $TEMPFILE)
+
+	$DIALOG --title "$NAME" --inputbox "`gettext \"Please enter the AMOUNT of ethers:\"`" 8 35 2> $TEMPFILE
+        AMOUNT=$(cat $TEMPFILE)
+	
+	TRANSACTION=$(./itmo -a $SENDER $RECEIVER $AMOUNT)
+	echo $TRANSACTION
+
+	MSG="`$GETTEXT \"Transaction ID is:\"`"
+	MSG+="$TRANSACTION"
+	$DIALOG --title "`$GETTEXT \"TRANSACTION number is:\"`" --msgbox "$TRANSACTION" 6 20
+	
+	
+	MSG="`$GETTEXT \"Do you want to make another transaction?\"`"
+	$DIALOG --title "$NAME" --yesno "$MSG" 10 50 || exit	
+	
+
+done
+
+}
+
+ui_main
