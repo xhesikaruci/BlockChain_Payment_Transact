@@ -3,12 +3,21 @@
 TEMPFILE=/tmp/params-$$
 GETTEXT="gettext -d itmo_ui"
 
+: ${DIALOG_OK=0}
+: ${DIALOG_CANCEL=1}
+
+
+#Set dialog
 set_dialog(){
 which gdialog 2> /dev/null && DIALOG=gdialog || DIALOG=dialog
 echo $DIALOG
 }
 
+
+
 ui_main() {
+    
+
     NAME="Ether Sender"
     DIALOG=$(set_dialog)
 
@@ -17,30 +26,68 @@ while true
 do
 
 	STATUS=$(./itmo -s)
-	if [[ $STATUS != *"OK" ]];
-        then
-        echo $STATUS
-	$DIALOG --title "`$GETTEXT \"Error!\"`" --msgbox "$STATUS" 6 20
-        exit 
+		if [[ $STATUS != *"OK" ]];
+        	then
+        	echo $STATUS
+		$DIALOG --title "`$GETTEXT \"Error!\"`" --msgbox "$STATUS" 6 20
+        	exit 
 	fi
 	
 	
 	
 	$DIALOG --title "$NAME" --inputbox "`gettext \"Please enter the account of SENDER:\"`" 8 35 2> $TEMPFILE
-	SENDER=$(cat $TEMPFILE)
-	
+	return_value=$?
+	case $return_value in
+  	$DIALOG_OK)
+	SENDER=$(cat $TEMPFILE);;    	
+  	$DIALOG_CANCEL)
+    	exit;;
+ 	esac
+
+		
 	$DIALOG --title "$NAME" --inputbox "`gettext \"Please enter the account of RECEIVER:\"`" 8 35 2> $TEMPFILE
-        RECEIVER=$(cat $TEMPFILE)
+        return_value=$?
+        case $return_value in
+        $DIALOG_OK)
+        RECEIVER=$(cat $TEMPFILE);;
+        $DIALOG_CANCEL)
+        exit;;
+	esac
+
 
 	$DIALOG --title "$NAME" --inputbox "`gettext \"Please enter the AMOUNT of ethers:\"`" 8 35 2> $TEMPFILE
-        AMOUNT=$(cat $TEMPFILE)
-	
-	TRANSACTION=$(./itmo -a $SENDER $RECEIVER $AMOUNT)
-	echo $TRANSACTION
+	return_value=$?
+        case $return_value in
+        $DIALOG_OK)
+        AMOUNT=$(cat $TEMPFILE);;
+        $DIALOG_CANCEL)
+        exit;;
+	esac
 
+        
+	$DIALOG --title "$NAME" --inputbox "`gettext \"Please enter the PASSWORD:\"`" 8 35 2> $TEMPFILE
+	return_value=$?
+        case $return_value in
+        $DIALOG_OK)
+        PASSWD=$(cat $TEMPFILE);;
+        $DIALOG_CANCEL)
+        exit;;
+	esac
+        
+	
+	TRANSACTION=$(./itmo -a $SENDER $RECEIVER $AMOUNT $PASSWD)
+	
+	
+	if [[ $TRANSACTION = *"Error"* ]];
+	then
+	$DIALOG --title 'ERROR' --msgbox 'Transaction is not successful, Please try again!' 5 20
+	else
 	MSG="`$GETTEXT \"Transaction ID is:\"`"
-	MSG+="$TRANSACTION"
-	$DIALOG --title "`$GETTEXT \"TRANSACTION number is:\"`" --msgbox "$TRANSACTION" 6 20
+        MSG+="$TRANSACTION"
+	$DIALOG --title "`$GETTEXT \"Results:\"`" --msgbox "Transaction number is: $TRANSACTION" 6 20
+	fi
+	
+
 	
 	
 	MSG="`$GETTEXT \"Do you want to make another transaction?\"`"

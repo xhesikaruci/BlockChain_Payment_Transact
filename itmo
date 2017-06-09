@@ -1,17 +1,6 @@
 #!/bin/bash
 
-
-
-pfile="./passwd"
-echo ""	> "$pfile"
-PASSWD=$(cat "$pfile")
-
-
-#Displays account of the user
-disp_account(){
-echo "Your Wallet is:"
-./geth --testnet --fast -exec "eth.accounts" attach 
-}
+#Sending ether form one account to another
 
 
 #Check geth location
@@ -54,9 +43,19 @@ send(){
 SENDER=$1
 RECEIVER=$2
 AMOUNT=$3
-./geth --exec "personal.unlockAccount('$SENDER', '$PASSWD')" attach > /dev/null
-TRANSACTION=`./geth --testnet --fast -exec "eth.sendTransaction({from: '$SENDER', to: '$RECEIVER', value: web3.toWei('$AMOUNT', 'ether')})" attach`
-echo $TRANSACTION
+PASSWD=$4
+
+if [[ -z  $ETH ]];
+    then
+   	./geth --exec "personal.unlockAccount('$SENDER', '$PASSWD')" attach > /dev/null
+        TRANSACTION=`./geth --testnet --fast -exec "eth.sendTransaction({from: '$SENDER', to: '$RECEIVER', value: web3.toWei('$AMOUNT', 'ether')})" attach`
+        echo $TRANSACTION
+
+else
+	$ETH --exec "personal.unlockAccount('$SENDER', '$PASSWD')" attach > /dev/null
+	TRANSACTION=`$ETH --testnet --fast -exec "eth.sendTransaction({from: '$SENDER', to: '$RECEIVER', value: web3.toWei('$AMOUNT', 'ether')})" attach`
+	echo $TRANSACTION
+fi
 }
 
 #Help
@@ -89,8 +88,8 @@ if [ ! "$(ps -A | grep ether*)" ];
 if [ ! -z $1 ];
     then
         if [ $1 = "-a" ];
-then
-	    TRANSACTION="$(send $2 $3 $4)"
+	then
+	    TRANSACTION="$(send $2 $3 $4 $5)"
 	    echo $TRANSACTION
 	    exit	
 	fi
@@ -108,19 +107,23 @@ do
         read AMOUNT
 
 	printf "Please enter your account PASSWORD:\n"
-	read PASSWD
-	echo "$PASSWD" > "$pfile"
+	read -s PASSWD
 
-	TRANSACTION="$(send $SENDER $RECEIVER $AMOUNT)"
+	printf "Wait..."
+
+	TRANSACTION="$(send $SENDER $RECEIVER $AMOUNT $PASSWD)"
 	echo "Transaction code is:"
 	echo $TRANSACTION
 	
+		
 	printf "Do you want make another transaction? (Y/N).\n"
 	read ANS
-	if [ $ANS != "Y" ];
-        then
-            echo "" > "$pfile"
+	if [ ! -z $ANS ];
+    		then
+        	if [ $ANS != "Y" ];
+        	then
             exit
+	fi
 	fi
 
 done
